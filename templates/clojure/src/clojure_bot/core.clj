@@ -10,7 +10,7 @@
   (let [x (api/register "🫥")]
     (reset! game-info x)
 
-    (while @run?
+    (while true
       (Thread/sleep 1000)
       (println "runnin: " (pr-str @run?))
       ;; You probably want to get the current game-state from the server before you do your move
