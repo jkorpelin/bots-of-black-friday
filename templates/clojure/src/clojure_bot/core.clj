@@ -1,10 +1,20 @@
 (ns clojure-bot.core
-  (:require [clojure-bot.api :as api])
+  (:require [clojure-bot.api :as api]
+            [clojure.set :as set])
   (:gen-class))
 
 (def game-info (atom {}))
 (def app (atom nil))
 (def game-state-atom (atom {}))
+
+(defn map-response->map [{:keys [width height tiles] :as m}]
+  (into #{}
+        (filter (fn [[x y]]
+                  (= \_ (nth (nth tiles y) x \X)))
+                (reduce concat
+                        (for [y (range height)]
+                          (for [x (range width)]
+                            [x y]))))))
 
 (defn get-game-state
   []
@@ -32,11 +42,23 @@
 
 (def user-name "🫥")
 
+(defn safe-directions [position game-map]
+  (let [{:keys [x y]} position
+        candidates #{[(inc x) y]
+                     [(dec x) y]
+                     [x (inc y)]
+                     [x (dec y)]}]
+    (set/intersection candidates game-map)))
+
+(let [positions (vec example-map)]
+  (zipmap positions (map  #(vec (safe-directions {:x (nth % 0) :y (nth % 1)} example-map)) positions)))
+
 (defn what-move
-  [game-state name]
+  [game-state name game-map]
   (let [_ (reset! game-state-atom game-state)
         my-health (:health (my-user game-state name))
         my-position (my-position game-state name)
+        safe-nextups (safe-directions my-position )
         beers (filter
                 #(= (:type %) "POTION")
                 (:items game-state))
@@ -69,14 +91,16 @@
 
 (defn run
   []
-  (let [x (api/register user-name)]
+  (let [x (api/register user-name)
+        game-map (-> (api/game-map)
+                     map-response->map)]
     (reset! game-info x)
 
     (while true
       (println "cycle")
       (Thread/sleep 333)
       (let [game-state (api/game-state)]
-        (api/move (:id @game-info) (what-move game-state user-name)))
+        (api/move (:id @game-info) (what-move game-state user-name game-map)))
 
       ;; You probably want to get the current game-state from the server before you do your move
       )))
