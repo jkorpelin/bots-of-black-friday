@@ -11,9 +11,28 @@
   (let [game-state (api/game-state)]
     (reset! game-state-atom game-state)))
 
-#_(defn closest-item
-  []
-  (let [ (api/game-state)]))
+(defn distance [p0 p1]
+  (+ (Math/abs ^int (- (:x p0) (:x p1)))
+     (Math/abs ^int (- (:y p0) (:y p1)))))
+
+(defn closest-item
+  [game-state name]
+  (let [position
+        (-> game-state
+            :players
+            (->> (filter #(= (:name %) name)))
+            first
+            :position)
+        ]
+    (-> game-state :items (->> (sort-by #(distance position (:position %)))) first)))
+
+(-> @game-state-atom :players first :name)
+
+
+(Math/abs -1)
+
+
+()
 
 (defn run
   []
