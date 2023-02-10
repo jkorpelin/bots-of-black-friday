@@ -37,7 +37,17 @@
   (let [_ (reset! game-state-atom game-state)
         my-health (:health (my-user game-state name))
         my-position (my-position game-state name)
-        closest (closest-item (:items game-state) my-position)]
+        beers (filter
+                #(= (:type %) "POTION")
+                (:items game-state))
+        non-beers (filter
+                    #(not= (:type %) "POTION")
+                    (:items game-state))
+        closest (closest-item
+                  (if (> my-health 50)
+                    non-beers
+                    beers)
+                  my-position)]
     #_(println "my-pos" (pr-str my-position) "closest: " (pr-str (:position closest)))
 
     (println "my health: " my-health)
@@ -64,7 +74,7 @@
 
     (while true
       (println "cycle")
-      (Thread/sleep 500)
+      (Thread/sleep 333)
       (let [game-state (api/game-state)]
         (api/move (:id @game-info) (what-move game-state user-name)))
 
