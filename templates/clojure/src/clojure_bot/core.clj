@@ -15,43 +15,47 @@
   (+ (Math/abs ^int (- (:x p0) (:x p1)))
      (Math/abs ^int (- (:y p0) (:y p1)))))
 
-(defn my-position
+(defn my-user
   [game-state name]
   (-> game-state
       :players
       (->> (filter #(= (:name %) name)))
-      first
-      :position))
+      first))
+
+(defn my-position
+  [game-state name]
+  (:position (my-user game-state name)))
 
 (defn closest-item
-  [game-state name]
-  (let [position (my-position game-state name)]
-    (-> game-state :items (->> (sort-by #(distance position (:position %)))) first)))
+  [items position]
+  (-> items (->> (sort-by #(distance position (:position %)))) first))
 
 (def user-name "🫥")
 
 (defn what-move
   [game-state name]
-  (println "game-state: " game-state)
   (let [_ (reset! game-state-atom game-state)
+        my-health (:health (my-user game-state name))
         my-position (my-position game-state name)
-        closest (closest-item game-state name)]
-    (println "my-pos" (pr-str my-position) "closest: " (pr-str (:position closest)))
+        closest (closest-item (:items game-state) my-position)]
+    #_(println "my-pos" (pr-str my-position) "closest: " (pr-str (:position closest)))
 
+    (println "my health: " my-health)
     (let [xdif (- (-> closest :position :x) (:x my-position))
           ydif (- (-> closest :position :y) (:y my-position))
           xdist (Math/abs ^int xdif)
-          ydist (Math/abs ^int ydif)]
-      (cond (= [0 0] [xdist ydist])
-            "PICK"
-            (and (< xdist ydist) (< 0 ydif))
-            "DOWN"
-            (< xdist ydist)
-            "UP"
-            (and (< ydist xdist) (< 0 xdif))
-            "RIGHT"
-            (< ydist xdist)
-            "LEFT"))))
+          ydist (Math/abs ^int ydif)
+          dirr (cond (= [0 0] [xdist ydist])
+                     "PICK"
+                     (and (<= xdist ydist) (< 0 ydif))
+                     "DOWN"
+                     (<= xdist ydist)
+                     "UP"
+                     (and (< ydist xdist) (< 0 xdif))
+                     "RIGHT"
+                     (< ydist xdist)
+                     "LEFT")]
+      dirr)))
 
 (defn run
   []
@@ -60,7 +64,7 @@
 
     (while true
       (println "cycle")
-      (Thread/sleep 1000)
+      (Thread/sleep 500)
       (let [game-state (api/game-state)]
         (api/move (:id @game-info) (what-move game-state user-name)))
 
