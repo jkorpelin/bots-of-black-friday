@@ -38,7 +38,7 @@
   (:position (my-user game-state name)))
 
 (defn closest-item
-  [items position]
+  [items position graph]
   (-> items (->> (sort-by #(distance position (:position %)))) first))
 
 (def user-name "🫥")
@@ -67,6 +67,18 @@
   (+ (Math/abs ^int (- x1 x2))
      (Math/abs ^int (- y1 y2))))
 
+(defn route [graph start goal]
+  (astar/route graph dist (partial dist goal) start goal))
+
+(defn closest-item-by-route
+  [items {:keys [x y]} graph]
+  (-> items
+      (->> (sort-by
+            (fn [item]
+              (count (route graph [x y] [(:x (:position item))
+                                         (:y (:position item))])))))
+      first))
+
 (defn what-move
   [game-state name game-map graph]
   (let [_ (reset! game-state-atom game-state)
@@ -81,11 +93,12 @@
         non-beers (filter
                     #(not= (:type %) "POTION")
                     (:items game-state))
-        closest (closest-item
-                  (if (> my-health 50)
-                    non-beers
-                    beers)
-                  my-position)
+        closest
+        (closest-item-by-route (if (> my-health 50)
+                                 non-beers
+                                 beers)
+                               my-position
+                               graph)
         closest-coords (let [{:keys [x y]} (:position closest)]
                          [x y])
 
