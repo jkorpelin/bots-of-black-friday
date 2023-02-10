@@ -12,7 +12,6 @@
     (reset! game-state-atom game-state)))
 
 (defn distance [p0 p1]
-  (println "p0: " p0 "p1: " p1)
   (+ (Math/abs ^int (- (:x p0) (:x p1)))
      (Math/abs ^int (- (:y p0) (:y p1)))))
 
@@ -38,9 +37,21 @@
         my-position (my-position game-state name)
         closest (closest-item game-state name)]
     (println "my-pos" (pr-str my-position) "closest: " (pr-str (:position closest)))
-    (if (< (:x my-position) (-> closest :position :x))
-      "RIGHT"
-      "LEFT")))
+
+    (let [xdif (- (-> closest :position :x) (:x my-position))
+          ydif (- (-> closest :position :y) (:y my-position))
+          xdist (Math/abs ^int xdif)
+          ydist (Math/abs ^int ydif)]
+      (cond (= [0 0] [xdist ydist])
+            "PICK"
+            (and (< xdist ydist) (< 0 ydif))
+            "DOWN"
+            (< xdist ydist)
+            "UP"
+            (and (< ydist xdist) (< 0 xdif))
+            "RIGHT"
+            (< ydist xdist)
+            "LEFT"))))
 
 (defn run
   []
