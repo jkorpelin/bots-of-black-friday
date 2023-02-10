@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [cheshire "5.11.0"]
-                 [clj-http "3.12.3"]]
+                 [clj-http "3.12.3"]
+                 [astar-search "0.2"]]
   :main ^:skip-aot clojure-bot.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all

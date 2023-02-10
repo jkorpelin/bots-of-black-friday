@@ -1,6 +1,7 @@
 (ns clojure-bot.core
   (:require [clojure-bot.api :as api]
-            [clojure.set :as set])
+            [clojure.set :as set]
+            [astar.core :as astar])
   (:gen-class))
 
 (def game-info (atom {}))
@@ -42,7 +43,7 @@
 
 (def user-name "🫥")
 
-(defn safe-directions [position game-map]
+(defn neighbours [position game-map]
   (let [{:keys [x y]} position
         candidates #{[(inc x) y]
                      [(dec x) y]
@@ -50,15 +51,30 @@
                      [x (dec y)]}]
     (set/intersection candidates game-map)))
 
-(let [positions (vec example-map)]
-  (zipmap positions (map  #(vec (safe-directions {:x (nth % 0) :y (nth % 1)} example-map)) positions)))
+
+(defn map-graph
+  [game-map]
+  (let [positions (vec game-map)]
+    (zipmap positions (map
+                        #(vec
+                           (neighbours
+                             {:x (nth % 0) :y (nth % 1)}
+                             game-map))
+                        positions))))
+
+(defn dist
+  [[x1 y1] [x2 y2]]
+  (+ (Math/abs ^int (- x1 x2))
+     (Math/abs ^int (- y1 y2))))
 
 (defn what-move
-  [game-state name game-map]
+  [game-state name game-map graph]
   (let [_ (reset! game-state-atom game-state)
         my-health (:health (my-user game-state name))
         my-position (my-position game-state name)
-        safe-nextups (safe-directions my-position )
+        my-pos-cords [(:x my-position) (:y my-position)]
+        my-pos-x (:x my-position)
+        my-pos-y (:y my-position)
         beers (filter
                 #(= (:type %) "POTION")
                 (:items game-state))
@@ -69,38 +85,45 @@
                   (if (> my-health 50)
                     non-beers
                     beers)
-                  my-position)]
+                  my-position)
+        closest-coords (let [{:keys [x y]} (:position closest)]
+                         [x y])
+
+        first-move (first (astar/route graph dist (partial dist closest-coords) my-pos-cords closest-coords))
+        _ (println "route: " (astar/route graph dist (partial dist closest-coords) my-pos-cords closest-coords))]
     #_(println "my-pos" (pr-str my-position) "closest: " (pr-str (:position closest)))
 
-    (println "my health: " my-health)
+
     (let [xdif (- (-> closest :position :x) (:x my-position))
           ydif (- (-> closest :position :y) (:y my-position))
           xdist (Math/abs ^int xdif)
           ydist (Math/abs ^int ydif)
-          dirr (cond (= [0 0] [xdist ydist])
+          move (cond (nil? first-move)
                      "PICK"
-                     (and (<= xdist ydist) (< 0 ydif))
-                     "DOWN"
-                     (<= xdist ydist)
-                     "UP"
-                     (and (< ydist xdist) (< 0 xdif))
+                     (= [(inc my-pos-x) my-pos-y] first-move)
                      "RIGHT"
-                     (< ydist xdist)
-                     "LEFT")]
-      dirr)))
+                     (= [my-pos-x (inc my-pos-y)] first-move)
+                     "UP"
+                     (= [(dec my-pos-x) my-pos-y] first-move)
+                     "LEFT"
+                     (= [my-pos-x (dec my-pos-y)] first-move)
+                     "DOWN")
+          _ (println "move: " move)]
+      move)))
 
 (defn run
   []
   (let [x (api/register user-name)
         game-map (-> (api/game-map)
-                     map-response->map)]
+                     map-response->map)
+        graph (map-graph game-map)]
     (reset! game-info x)
 
     (while true
       (println "cycle")
       (Thread/sleep 333)
       (let [game-state (api/game-state)]
-        (api/move (:id @game-info) (what-move game-state user-name game-map)))
+        (api/move (:id x) (what-move game-state user-name game-map graph)))
 
       ;; You probably want to get the current game-state from the server before you do your move
       )))
