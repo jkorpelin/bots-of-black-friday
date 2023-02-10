@@ -3,7 +3,7 @@
             [cheshire.core :as json]))
 
 (def local-url "http://localhost:8080")
-(def prod-url "")
+(def prod-url "https://bots-of-black-friday-oulu.azurewebsites.net")
 
 (defn url []
   (cond
