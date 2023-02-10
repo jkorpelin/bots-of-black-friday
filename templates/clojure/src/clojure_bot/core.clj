@@ -3,11 +3,7 @@
   (:gen-class))
 
 (def game-info (atom {}))
-(def run? (atom true))
-
-(defn start
-  []
-  (reset! run? ))
+(def app (atom nil))
 
 (defn run
   []
@@ -20,7 +16,13 @@
       ;; You probably want to get the current game-state from the server before you do your move
       (api/move (:id @game-info) (rand-nth ["LEFT" "RIGHT"])))))
 
+(defn start
+  []
+  (reset! app (future (run))))
 
+(defn stop
+  []
+  (future-cancel @app))
 
 (defn -main
   [& args]
